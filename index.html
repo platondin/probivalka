@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSINT Hub — Public Research Dashboard</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2d;--text:#eef4ff;--muted:#93a4c4;--accent:#4da3ff;--accent2:#8b5cf6;--line:#263553}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#18254a 0,#0b1020 45%);color:var(--text);font:15px/1.5 Inter,system-ui,Segoe UI,Arial,sans-serif}
+.wrap{max-width:1180px;margin:auto;padding:28px 18px 60px}.hero{margin-bottom:22px}h1{font-size:38px;line-height:1;margin:0 0 8px}.muted{color:var(--muted)}
+.badge{display:inline-block;padding:5px 9px;border:1px solid #35507a;border-radius:999px;color:#b9d8ff;background:#10213a;font-size:12px}
+.panel{background:rgba(18,26,45,.88);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 15px 40px #0004}
+.search{display:grid;grid-template-columns:170px 1fr 130px;gap:10px}select,input,button{border:1px solid var(--line);border-radius:11px;background:#0e1628;color:var(--text);padding:12px;font:inherit}button{cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700}.secondary{background:#17243d!important;border:1px solid #31476e!important}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px;display:flex;flex-direction:column;gap:8px}.card h3{margin:0;font-size:18px}.tag{font-size:11px;color:#b7c7e5}.actions{display:flex;gap:8px;margin-top:auto}.actions a{flex:1;text-align:center;text-decoration:none;color:#fff;padding:9px;border-radius:9px;background:#17243d;border:1px solid #31476e}.result{margin-top:16px;display:none}.result pre{white-space:pre-wrap;margin:0;color:#cfe0ff}.notice{margin:16px 0;padding:12px 14px;border-radius:12px;border:1px solid #5d4b18;background:#2a2310;color:#f4dda0}footer{margin-top:24px;color:var(--muted);font-size:13px}
+@media(max-width:850px){.grid{grid-template-columns:1fr 1fr}.search{grid-template-columns:1fr 1fr}.search button{grid-column:1/-1}}@media(max-width:560px){.grid{grid-template-columns:1fr}h1{font-size:30px}}
+</style>
+</head><body><div class="wrap">
+<div class="hero"><span class="badge">PUBLIC OSINT • v1</span><h1>OSINT Hub</h1><div class="muted">Единая панель для законного поиска открытой информации.</div></div>
+<div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button></div>
+<div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
+<div id="result" class="result panel"><h3>Сформированные публичные запросы</h3><pre id="resultText"></pre><div class="actions" style="margin-top:12px"><button class="secondary" onclick="copyQuery()">Скопировать запрос</button></div></div></div>
+<div class="grid">
+<div class="card"><h3>Epieos</h3><span class="tag">Email / phone OSINT</span><div class="muted">Публичный OSINT-поиск и enrichment.</div><div class="actions"><a target="_blank" href="https://epieos.com/">Открыть</a></div></div>
+<div class="card"><h3>Have I Been Pwned</h3><span class="tag">Email / breaches</span><div class="muted">Проверка собственного email на известные утечки.</div><div class="actions"><a target="_blank" href="https://haveibeenpwned.com/">Открыть</a></div></div>
+<div class="card"><h3>Social Searcher</h3><span class="tag">Public social media</span><div class="muted">Поиск публичных профилей, постов и упоминаний.</div><div class="actions"><a target="_blank" href="https://www.social-searcher.com/">Открыть</a></div></div>
+<div class="card"><h3>PhoneInfoga</h3><span class="tag">Phone OSINT</span><div class="muted">Открытый инструмент для технического анализа номера.</div><div class="actions"><a target="_blank" href="https://github.com/sundowndev/PhoneInfoga">GitHub</a></div></div>
+<div class="card"><h3>FreeCarrierLookup</h3><span class="tag">Phone metadata</span><div class="muted">Оператор и технические сведения, если сервис их предоставляет.</div><div class="actions"><a target="_blank" href="https://freecarrierlookup.com/">Открыть</a></div></div>
+<div class="card"><h3>IPinfo</h3><span class="tag">IP</span><div class="muted">ASN, организация, географические и сетевые сведения.</div><div class="actions"><a target="_blank" href="https://ipinfo.io/">Открыть</a></div></div>
+<div class="card"><h3>Maltego</h3><span class="tag">OSINT graph</span><div class="muted">Графовое связывание публичных источников и сущностей.</div><div class="actions"><a target="_blank" href="https://www.maltego.com/">Открыть</a></div></div>
+<div class="card"><h3>IntelTechniques</h3><span class="tag">OSINT methods</span><div class="muted">Набор публичных OSINT-методов и поисковых инструментов.</div><div class="actions"><a target="_blank" href="https://inteltechniques.com/">Открыть</a></div></div>
+<div class="card"><h3>ExifTool</h3><span class="tag">Files / metadata</span><div class="muted">Извлечение метаданных из собственных фото и файлов.</div><div class="actions"><a target="_blank" href="https://exiftool.org/">Открыть</a></div></div>
+<div class="card"><h3>PimEyes</h3><span class="tag">Reverse image search</span><div class="muted">Отдельный ручной сервис поиска изображений.</div><div class="actions"><a target="_blank" href="https://pimeyes.com/">Открыть</a></div></div>
+<div class="card"><h3>Intelligence X</h3><span class="tag">Public / archival search</span><div class="muted">Поиск по публичным и архивным источникам; соблюдай правила сервиса.</div><div class="actions"><a target="_blank" href="https://intelx.io/">Открыть</a></div></div>
+<div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div></div>
+<footer>В этой версии намеренно нет автоматизации «универсального бота по пробиву», баз с утечками, паролей или приватных данных.</footer>
+</div>
+<script>
+let lastQuery="";const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"имя или ключевое слово"};
+document.getElementById("kind").addEventListener("change",e=>document.getElementById("query").placeholder=placeholders[e.target.value]);
+function runSearch(){const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();if(!q){alert("Введи значение для поиска.");return}const e=encodeURIComponent(q);let l=[];
+if(kind==="email")l=["Google: site:epieos.com "+q,"Google: site:haveibeenpwned.com "+q,"Google: site:social-searcher.com "+q,'Google: "'+q+'"'];
+else if(kind==="phone")l=['Google: "'+q+'"','Google: site:freecarrierlookup.com "'+q+'"',"Epieos: "+q,"PhoneInfoga: "+q];
+else if(kind==="ip")l=["IPinfo: https://ipinfo.io/"+e,'Google: "'+q+'"','Google: site:arin.net "'+q+'"','Google: site:ripe.net "'+q+'"'];
+else if(kind==="username")l=["Social Searcher: "+q,'Google: "'+q+'"','Google: site:reddit.com "'+q+'"','Google: site:github.com "'+q+'"'];
+else if(kind==="domain")l=["Google: site:"+q,'Google: "'+q+'"',"DNS/WHOIS search: "+q];
+else l=['Google exact: "'+q+'"',"Social Searcher: "+q,"Google public-web search: "+q];
+lastQuery=l.join("\n");document.getElementById("resultText").textContent=lastQuery;document.getElementById("result").style.display="block"}
+async function copyQuery(){try{await navigator.clipboard.writeText(lastQuery);alert("Запросы скопированы.")}catch(e){alert("Не удалось скопировать автоматически.")}}
+</script></body></html>
