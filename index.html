@@ -75,9 +75,17 @@ async function autoScan(){
     if(!r.ok) throw new Error(data.error||"Ошибка API");
     out.innerHTML=data.results.map(x=>"<div class=\"card\" style=\"margin-top:10px\"><h3>"+esc(x.source)+" <span class=\"tag\">"+statusLabel(x.status)+"</span></h3>"+renderData(x.data)+"</div>").join("");
   }catch(e){
-    out.innerHTML="<div class=\"card\"><h3>❌ Автоскан не запустился</h3><div class=\"muted\">"+esc(e.message)+"</div><p>Для работы /api/scan сайт должен быть размещён на Vercel или другом сервере, поддерживающем serverless API.</p></div>";
+    const local = {
+      phone:"Номер: "+q+"\\n\\nСерверный API недоступен. Для автоматического поиска по телефону нужен подключённый API.",
+      email:"Email: "+q+"\\n\\nСерверный API HIBP недоступен. Нужен backend с HIBP_API_KEY.",
+      ip:"IP: "+q+"\\n\\nСерверные IPinfo/RDAP-запросы недоступны.",
+      username:"Username: "+q+"\\n\\nGitHub API недоступен на этой странице.",
+      domain:"Домен: "+q+"\\n\\nDNS API недоступен на этой странице.",
+      name:"Имя/ключевое слово: "+q+"\\n\\nОбщий поиск без API не выполняется."
+    };
+    out.innerHTML="<div class=\"card\"><h3>⚠️ Backend недоступен</h3><pre>"+esc(local[kind]||"API недоступен.")+"</pre><div class=\"muted\">"+esc(e.message)+"</div><p>Для настоящего автоматического сканирования открой сайт через Vercel/другой backend с /api/scan.</p></div>";
   }
-}
+}}
 
 async function runSearch(){
   const kind=document.getElementById("kind").value;
