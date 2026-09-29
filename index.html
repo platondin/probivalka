@@ -31,7 +31,9 @@
 <div class="card"><h3>ExifTool</h3><span class="tag">Files / metadata</span><div class="muted">Извлечение метаданных из собственных фото и файлов.</div><div class="actions"><a target="_blank" href="https://exiftool.org/">Открыть</a></div></div>
 <div class="card"><h3>PimEyes</h3><span class="tag">Reverse image search</span><div class="muted">Отдельный ручной сервис поиска изображений.</div><div class="actions"><a target="_blank" href="https://pimeyes.com/">Открыть</a></div></div>
 <div class="card"><h3>Intelligence X</h3><span class="tag">Public / archival search</span><div class="muted">Поиск по публичным и архивным источникам; соблюдай правила сервиса.</div><div class="actions"><a target="_blank" href="https://intelx.io/">Открыть</a></div></div>
-<div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div></div>
+<div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div>
+<div class="card"><h3>Osintgram</h3><span class="tag">Instagram / public OSINT</span><div class="muted">Инструмент для анализа только доступных публичных данных.</div><div class="actions"><a target="_blank" href="https://github.com/Datalux/Osintgram">GitHub</a></div></div>
+<div class="card"><h3>Getcontact</h3><span class="tag">Phone / caller ID</span><div class="muted">Отдельный сервис идентификации звонков; требует ручного использования и соблюдения правил.</div><div class="actions"><a target="_blank" href="https://www.getcontact.com/">Открыть</a></div></div></div>
 <footer>Автоскан открывает публичные источники и официальные страницы параллельно. Отдельная проверка утечек предназначена только для проверки собственных/разрешённых данных; инструмент не получает пароли, закрытые аккаунты или приватные базы. Некоторые сервисы требуют API-ключ или ручной ввод; например, HIBP требует авторизацию для поиска конкретного email через API. </footer>
 </div>
 <script>
@@ -40,38 +42,58 @@ document.getElementById("kind").addEventListener("change",e=>document.getElement
 async function autoScan(){
 const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();
 if(!q){alert("Введи значение для поиска.");return}
-const e=encodeURIComponent(q), urls=[];
+const e=encodeURIComponent(q), jobs=[];
+
+function add(name,url,mode="open"){jobs.push({name,url,mode})}
+
 if(kind==="email"){
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://haveibeenpwned.com/");
-urls.push("https://www.social-searcher.com/");
-urls.push("https://epieos.com/");
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("Epieos","https://epieos.com/");
+  add("Have I Been Pwned","https://haveibeenpwned.com/");
+  add("Social Searcher","https://www.social-searcher.com/");
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }else if(kind==="phone"){
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://epieos.com/");
-urls.push("https://freecarrierlookup.com/");
-urls.push("https://github.com/sundowndev/PhoneInfoga");
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("Epieos","https://epieos.com/");
+  add("FreeCarrierLookup","https://freecarrierlookup.com/");
+  add("PhoneInfoga","https://github.com/sundowndev/PhoneInfoga");
+  add("Getcontact","https://www.getcontact.com/");
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }else if(kind==="ip"){
-urls.push("https://ipinfo.io/"+e);
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://search.arin.net/rdap/?query="+e);
-urls.push("https://apps.db.ripe.net/db-web-ui/query?searchtext="+e);
+  add("IPinfo","https://ipinfo.io/"+e);
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("ARIN RDAP","https://search.arin.net/rdap/?query="+e);
+  add("RIPE Database","https://apps.db.ripe.net/db-web-ui/query?searchtext="+e);
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }else if(kind==="username"){
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://www.google.com/search?q="+encodeURIComponent('site:github.com "'+q+'"'));
-urls.push("https://www.google.com/search?q="+encodeURIComponent('site:reddit.com "'+q+'"'));
-urls.push("https://www.social-searcher.com/");
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("GitHub public results","https://www.google.com/search?q="+encodeURIComponent('site:github.com "'+q+'"'));
+  add("Reddit public results","https://www.google.com/search?q="+encodeURIComponent('site:reddit.com "'+q+'"'));
+  add("Social Searcher","https://www.social-searcher.com/");
+  add("Osintgram","https://github.com/Datalux/Osintgram");
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }else if(kind==="domain"){
-urls.push("https://www.google.com/search?q="+encodeURIComponent('site:'+q));
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://dns.google/resolve?name="+e+"&type=ANY");
+  add("Google site search","https://www.google.com/search?q="+encodeURIComponent('site:'+q));
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("DNS Google","https://dns.google/resolve?name="+e+"&type=ANY");
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }else{
-urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-urls.push("https://www.social-searcher.com/");
+  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+  add("Social Searcher","https://www.social-searcher.com/");
+  add("IntelTechniques","https://inteltechniques.com/tools/");
 }
+
 let opened=0;
-for(const u of urls){const w=window.open(u,"_blank");if(w)opened++;await new Promise(r=>setTimeout(r,180));}
-document.getElementById("scanText").textContent="Открыто источников: "+opened+" из "+urls.length+"\n\nСервисы, которым нужен API-ключ или ручной ввод, намеренно не обходятся автоматически. Это защищает аккаунты и не нарушает лимиты/правила сервисов.";
+for(const job of jobs){
+  const w=window.open(job.url,"_blank");
+  if(w)opened++;
+  await new Promise(r=>setTimeout(r,180));
+}
+document.getElementById("scanText").textContent=
+"Автоскан завершён. Открыто источников: "+opened+" из "+jobs.length+"\n\n"+
+jobs.map((x,i)=>(i+1)+". "+x.name+" — "+x.url).join("\n")+
+"\n\nЧасть инструментов (PimEyes, ExifTool, Maltego, Osintgram, Getcontact) требует ручной работы, загрузки файла, приложения или авторизации — сайт не пытается обходить эти ограничения.\n"+
+"Не включены автоматизация доступа к закрытым аккаунтам, паролям, приватным данным, незаконно полученным базам и другим непубличным источникам.";
 document.getElementById("scanStatus").style.display="block";
 }
 function safeExposureScan(){
