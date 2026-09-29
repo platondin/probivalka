@@ -16,9 +16,9 @@
 </style>
 </head><body><div class="wrap">
 <div class="hero"><span class="badge">PUBLIC OSINT • v1</span><h1>OSINT Hub</h1><div class="muted">Единая панель для законного поиска открытой информации.</div></div>
-<div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button></div>
+<div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button><button class="secondary" onclick="autoScan()">⚡ Автоскан</button></div>
 <div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
-<div id="result" class="result panel"><h3>Сформированные публичные запросы</h3><pre id="resultText"></pre><div class="actions" style="margin-top:12px"><button class="secondary" onclick="copyQuery()">Скопировать запрос</button></div></div></div>
+<div id="scanStatus" class="result panel"><h3>Автоскан</h3><pre id="scanText"></pre></div><div id="result" class="result panel"><h3>Сформированные публичные запросы</h3><pre id="resultText"></pre><div class="actions" style="margin-top:12px"><button class="secondary" onclick="copyQuery()">Скопировать запрос</button></div></div></div>
 <div class="grid">
 <div class="card"><h3>Epieos</h3><span class="tag">Email / phone OSINT</span><div class="muted">Публичный OSINT-поиск и enrichment.</div><div class="actions"><a target="_blank" href="https://epieos.com/">Открыть</a></div></div>
 <div class="card"><h3>Have I Been Pwned</h3><span class="tag">Email / breaches</span><div class="muted">Проверка собственного email на известные утечки.</div><div class="actions"><a target="_blank" href="https://haveibeenpwned.com/">Открыть</a></div></div>
@@ -32,11 +32,48 @@
 <div class="card"><h3>PimEyes</h3><span class="tag">Reverse image search</span><div class="muted">Отдельный ручной сервис поиска изображений.</div><div class="actions"><a target="_blank" href="https://pimeyes.com/">Открыть</a></div></div>
 <div class="card"><h3>Intelligence X</h3><span class="tag">Public / archival search</span><div class="muted">Поиск по публичным и архивным источникам; соблюдай правила сервиса.</div><div class="actions"><a target="_blank" href="https://intelx.io/">Открыть</a></div></div>
 <div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div></div>
-<footer>В этой версии намеренно нет автоматизации «универсального бота по пробиву», баз с утечками, паролей или приватных данных.</footer>
+<footer>Автоскан открывает публичные источники и официальные страницы параллельно. Он не обходит закрытые аккаунты, утечки, пароли или приватные базы. Некоторые сервисы требуют API-ключ или ручной ввод; например, HIBP требует авторизацию для поиска конкретного email через API. </footer>
 </div>
 <script>
 let lastQuery="";const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"имя или ключевое слово"};
 document.getElementById("kind").addEventListener("change",e=>document.getElementById("query").placeholder=placeholders[e.target.value]);
+async function autoScan(){
+const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();
+if(!q){alert("Введи значение для поиска.");return}
+const e=encodeURIComponent(q), urls=[];
+if(kind==="email"){
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://haveibeenpwned.com/");
+urls.push("https://www.social-searcher.com/");
+urls.push("https://epieos.com/");
+}else if(kind==="phone"){
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://epieos.com/");
+urls.push("https://freecarrierlookup.com/");
+urls.push("https://github.com/sundowndev/PhoneInfoga");
+}else if(kind==="ip"){
+urls.push("https://ipinfo.io/"+e);
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://search.arin.net/rdap/?query="+e);
+urls.push("https://apps.db.ripe.net/db-web-ui/query?searchtext="+e);
+}else if(kind==="username"){
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://www.google.com/search?q="+encodeURIComponent('site:github.com "'+q+'"'));
+urls.push("https://www.google.com/search?q="+encodeURIComponent('site:reddit.com "'+q+'"'));
+urls.push("https://www.social-searcher.com/");
+}else if(kind==="domain"){
+urls.push("https://www.google.com/search?q="+encodeURIComponent('site:'+q));
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://dns.google/resolve?name="+e+"&type=ANY");
+}else{
+urls.push("https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
+urls.push("https://www.social-searcher.com/");
+}
+let opened=0;
+for(const u of urls){const w=window.open(u,"_blank");if(w)opened++;await new Promise(r=>setTimeout(r,180));}
+document.getElementById("scanText").textContent="Открыто источников: "+opened+" из "+urls.length+"\n\nСервисы, которым нужен API-ключ или ручной ввод, намеренно не обходятся автоматически. Это защищает аккаунты и не нарушает лимиты/правила сервисов.";
+document.getElementById("scanStatus").style.display="block";
+}
 function runSearch(){const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();if(!q){alert("Введи значение для поиска.");return}const e=encodeURIComponent(q);let l=[];
 if(kind==="email")l=["Google: site:epieos.com "+q,"Google: site:haveibeenpwned.com "+q,"Google: site:social-searcher.com "+q,'Google: "'+q+'"'];
 else if(kind==="phone")l=['Google: "'+q+'"','Google: site:freecarrierlookup.com "'+q+'"',"Epieos: "+q,"PhoneInfoga: "+q];
