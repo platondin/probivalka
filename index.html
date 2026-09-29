@@ -48,144 +48,147 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script><script>
 const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"Имя или фамилия",photo:"Выбери фотографию ниже"};
-
 document.getElementById("kind").addEventListener("change",e=>{
-  const kind=e.target.value, query=document.getElementById("query"), picker=document.getElementById("photoPicker"), button=document.getElementById("searchButton");
-  const isPhoto=kind==="photo";
-  query.placeholder=placeholders[kind]||"";
-  query.disabled=isPhoto;
-  query.style.opacity=isPhoto?".55":"1";
-  picker.style.display=isPhoto?"block":"none";
-  button.textContent=isPhoto?"📷 Анализировать":"🔎 Искать";
+  const kind=e.target.value,q=document.getElementById("query"),picker=document.getElementById("photoPicker"),button=document.getElementById("searchButton");
+  const photo=kind==="photo";
+  q.placeholder=placeholders[kind]||"";
+  q.disabled=photo;
+  q.style.opacity=photo?".55":"1";
+  picker.style.display=photo?"block":"none";
+  button.textContent=photo?"📷 Анализировать":"🔎 Искать";
 });
 
-function esc(v){
-  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));
-}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));}
 function renderData(data){
-  if(typeof data==="string") return "<div class="data-text">"+esc(data)+"</div>";
+  if(typeof data==="string") return "<div>"+esc(data)+"</div>";
   return "<pre>"+esc(JSON.stringify(data,null,2))+"</pre>";
 }
-function statusLabel(s){
-  return s==="ok"?"Готово":s==="clean"?"Не найдено":s==="needs_api_key"?"Нужен API-ключ":s==="not_supported"?"Не подключено":"Ошибка";
-}
-function addProgress(t){
+function addProgress(text,done=false){
   const el=document.createElement("div");
-  el.className="muted"; el.style.margin="6px 0";
-  el.textContent="⏳ "+t;
+  el.className="muted";el.style.margin="6px 0";
+  el.textContent=(done?"✅ ":"⏳ ")+text;
   document.getElementById("scanText").appendChild(el);
 }
 function addResult(source,status,data){
   const card=document.createElement("div");
-  card.className="card"; card.style.marginTop="10px";
-  card.innerHTML="<h3>"+esc(source)+" <span class="tag">"+esc(statusLabel(status))+"</span></h3>"+renderData(data);
+  card.className="card";card.style.marginTop="10px";
+  card.innerHTML="<h3>"+esc(source)+" <span class="tag">"+esc(status==="ok"?"Готово":status==="clean"?"Не найдено":status==="error"?"Ошибка":"Информация")+"</span></h3>"+renderData(data);
   document.getElementById("scanText").appendChild(card);
 }
-function setBusy(busy){
+function setBusy(v){
   const b=document.getElementById("searchButton");
-  b.disabled=busy; b.style.opacity=busy?".65":"1";
+  b.disabled=v;b.style.opacity=v?".65":"1";
 }
 
-function planFor(kind){
-  const plans={
-    email:[["Have I Been Pwned","hibp"]],
-    username:[["GitHub public users","github-users"]],
-    ip:[["IPinfo","ipinfo"],["ARIN RDAP","arin-rdap"],["RIPE RDAP","ripe-rdap"]],
-    domain:[["Google DNS — A","dns-a"],["Google DNS — MX","dns-mx"],["Google DNS — NS","dns-ns"],["Google DNS — TXT","dns-txt"]],
-    phone:[["Phone basic analysis","phone-basic"]],
-    name:[["Wikipedia public search","wikipedia"],["Wikidata public search","wikidata"]]
-  };
-  return plans[kind]||[];
-}
-
-async function searchSource(kind,value,source){
-  const r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind,value,source})});
-  let data={}; try{data=await r.json()}catch{}
-  if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
+async function getJson(url,options={}){
+  const r=await fetch(url,options);
+  let data={};try{data=await r.json()}catch{}
+  if(!r.ok)throw new Error("HTTP "+r.status);
   return data;
 }
 
-async function runSearch(){
-  const kind=document.getElementById("kind").value, q=document.getElementById("query").value.trim();
-  const box=document.getElementById("scanStatus"), out=document.getElementById("scanText");
-  box.style.display="block"; out.innerHTML="";
-  setBusy(false);
-
-  if(kind==="photo"){
-    const file=document.getElementById("photoFile").files[0];
-    if(!file){addResult("Поиск","not_supported","Фото не выбрано. Выбери изображение и нажми кнопку ещё раз.");return}
-    setBusy(true);
-    addProgress("Читаю файл и EXIF-метаданные");
+async function searchEmail(q){
+  addProgress("Проверяю формат email");
+  const at=q.lastIndexOf("@");
+  const domain=at>0?q.slice(at+1):"";
+  const local=at>0?q.slice(0,at):q;
+  addResult("📧 Email — базовый анализ","ok",{email:q,local_part:local,domain,valid_shape:at>0&&domain.includes(".")});
+  if(domain){
+    addProgress("Проверяю DNS домена email");
     try{
-      const info=await analyzePhotoFile(file);
-      addResult("📷 Анализ фотографии","ok",info);
-      addProgress("Технический анализ готов");
-      addResult("🔎 Обратный поиск изображения","not_supported","Автоматический reverse-image API в текущей конфигурации не подключён, поэтому фото не отправляется на сторонние сайты и новые страницы не открываются.");
-    }catch(e){addResult("📷 Анализ фотографии","error",{message:e.message})}
-    finally{setBusy(false)}
-    return;
+      const d=await getJson("https://dns.google/resolve?name="+encodeURIComponent(domain)+"&type=MX");
+      addResult("🌐 DNS MX — "+domain,"ok",d);
+    }catch(e){addResult("🌐 DNS MX — "+domain,"error",{message:e.message});}
   }
-
-  if(!q){addResult("Поиск","not_supported","Введи значение для поиска.");return}
-  setBusy(true);
-  const plans=planFor(kind);
-  if(!plans.length){addResult("Scanner","not_supported","Для выбранного типа сейчас нет подключённых автоматических API.");setBusy(false);return}
-
-  const summary=document.createElement("div");
-  summary.className="notice"; summary.textContent="🔎 Поиск запущен. Результаты будут добавляться сюда по мере ответа источников.";
-  out.appendChild(summary);
-
-  let finished=0;
-  await Promise.all(plans.map(async ([label,source])=>{
-    addProgress("Проверяю "+label);
-    try{
-      const data=await searchSource(kind,q,source);
-      const item=(data.results||[])[0];
-      addResult(item?.source||label,item?.status||"not_supported",item?.data??"Источник не вернул данных.");
-    }catch(e){
-      addResult(label,"error",{message:e.message});
-    }finally{
-      finished++;
-      const p=document.createElement("div");
-      p.className="muted"; p.style.margin="6px 0";
-      p.textContent="✅ Завершено: "+finished+" / "+plans.length;
-      out.appendChild(p);
-    }
-  }));
-  summary.textContent="✅ Поиск завершён. Ответы от всех подключённых источников получены и показаны выше.";
-  setBusy(false);
+  addResult("🛡️ Проверка утечек","not_supported","Автоматическая проверка закрытых/слитых баз не выполняется. Для такой проверки нужен отдельный разрешённый API; сайт не загружает украденные базы.");
 }
-
+async function searchPhone(q){
+  const digits=q.replace(/\D/g,"");
+  addProgress("Нормализую номер");
+  addResult("📱 Телефон — базовый анализ","ok",{input:q,digits,starts_with_plus:q.trim().startsWith("+"),digits_length:digits.length});
+  addResult("📡 Оператор / владелец","not_supported","Встроенный режим не получает персональные сведения о владельце номера.");
+}
+async function searchIp(q){
+  addProgress("Запрашиваю данные IPinfo");
+  try{
+    const d=await getJson("https://ipinfo.io/"+encodeURIComponent(q)+"/json");
+    addResult("🌐 IPinfo","ok",d);
+  }catch(e){addResult("🌐 IPinfo","error",{message:e.message});}
+  for(const [name,url] of [
+    ["ARIN RDAP","https://rdap.arin.net/registry/ip/"+encodeURIComponent(q)],
+    ["RIPE RDAP","https://rdap.db.ripe.net/ip/"+encodeURIComponent(q)]
+  ]){
+    addProgress("Проверяю "+name);
+    try{addResult(name,"ok",await getJson(url));}
+    catch(e){addResult(name,"error",{message:e.message});}
+  }
+}
+async function searchUsername(q){
+  addProgress("Ищу публичные профили GitHub");
+  try{
+    const d=await getJson("https://api.github.com/search/users?q="+encodeURIComponent(q));
+    addResult("👤 GitHub public users","ok",{total_count:d.total_count||0,items:(d.items||[]).slice(0,20).map(u=>({login:u.login,id:u.id,type:u.type,avatar_url:u.avatar_url,html_url:u.html_url}))});
+  }catch(e){addResult("👤 GitHub public users","error",{message:e.message});}
+}
+async function searchDomain(q){
+  const types=["A","MX","NS","TXT"];
+  for(const type of types){
+    addProgress("Проверяю DNS "+type);
+    try{addResult("🌍 Google DNS — "+type,"ok",await getJson("https://dns.google/resolve?name="+encodeURIComponent(q)+"&type="+type));}
+    catch(e){addResult("🌍 Google DNS — "+type,"error",{message:e.message});}
+  }
+}
+async function searchName(q){
+  addProgress("Ищу публичные совпадения в Wikipedia");
+  try{
+    const d=await getJson("https://en.wikipedia.org/w/api.php?action=opensearch&search="+encodeURIComponent(q)+"&limit=10&namespace=0&format=json&origin=*");
+    addResult("📚 Wikipedia public search","ok",{query:q,titles:d[1]||[],descriptions:d[2]||[],urls:d[3]||[]});
+  }catch(e){addResult("📚 Wikipedia public search","error",{message:e.message});}
+  addProgress("Ищу публичные совпадения в Wikidata");
+  try{
+    const d=await getJson("https://www.wikidata.org/w/api.php?action=wbsearchentities&search="+encodeURIComponent(q)+"&language=en&format=json&limit=10&origin=*");
+    addResult("🗂️ Wikidata public search","ok",{query:q,items:(d.search||[]).slice(0,10).map(x=>({id:x.id,label:x.label,description:x.description,url:x.concepturi}))});
+  }catch(e){addResult("🗂️ Wikidata public search","error",{message:e.message});}
+}
 async function analyzePhotoFile(file){
   const bytes=await file.arrayBuffer();
   const digest=await crypto.subtle.digest("SHA-256",bytes);
   const hash=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
   const exif=await readExif(file);
-  const img=await new Promise((resolve,reject)=>{
-    const i=new Image(); i.onload=()=>resolve(i); i.onerror=()=>reject(new Error("не удалось прочитать изображение")); i.src=URL.createObjectURL(file);
-  });
-  return {
-    file:file.name,
-    size_bytes:file.size,
-    size_kb:Math.round(file.size/1024),
-    mime_type:file.type||"unknown",
-    width:img.naturalWidth,
-    height:img.naturalHeight,
-    sha256:hash,
-    exif:exif||{},
-    note:"Сайт не устанавливает личность человека по фотографии."
-  };
+  const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error("не удалось прочитать изображение"));i.src=URL.createObjectURL(file);});
+  return {file:file.name,size_bytes:file.size,size_kb:Math.round(file.size/1024),mime_type:file.type||"unknown",width:img.naturalWidth,height:img.naturalHeight,sha256:hash,exif:exif||{},note:"Сайт не устанавливает личность человека по фотографии."};
+}
+async function readExif(file){
+  if(window.exifr&&typeof window.exifr.parse==="function")return await window.exifr.parse(file,{gps:true});
+  if(!window.exifrPromise){
+    window.exifrPromise=new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js";s.onload=resolve;s.onerror=()=>reject(new Error("не удалось загрузить модуль EXIF"));document.head.appendChild(s);});
+  }
+  await window.exifrPromise;return await window.exifr.parse(file,{gps:true});
 }
 
-async function readExif(file){
-  if(window.exifr&&typeof window.exifr.parse==="function") return await window.exifr.parse(file,{gps:true});
-  if(!window.exifrPromise){
-    window.exifrPromise=new Promise((resolve,reject)=>{
-      const s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js";
-      s.onload=resolve; s.onerror=()=>reject(new Error("не удалось загрузить модуль EXIF")); document.head.appendChild(s);
-    });
-  }
-  await window.exifrPromise;
-  return await window.exifr.parse(file,{gps:true});
+async function runSearch(){
+  const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim(),box=document.getElementById("scanStatus"),out=document.getElementById("scanText");
+  box.style.display="block";out.innerHTML="";
+  if(kind!=="photo"&&!q){addResult("Поиск","error","Введи значение для поиска.");return;}
+  setBusy(true);
+  const started=performance.now();
+  addProgress("Поиск запущен — результаты появятся здесь по мере ответа источников");
+  try{
+    if(kind==="email")await searchEmail(q);
+    else if(kind==="phone")await searchPhone(q);
+    else if(kind==="ip")await searchIp(q);
+    else if(kind==="username")await searchUsername(q);
+    else if(kind==="domain")await searchDomain(q);
+    else if(kind==="name")await searchName(q);
+    else if(kind==="photo"){
+      const file=document.getElementById("photoFile").files[0];
+      if(!file){addResult("Фото","error","Выбери изображение.");return;}
+      addProgress("Читаю EXIF и технические параметры файла");
+      addResult("📷 Анализ фотографии","ok",await analyzePhotoFile(file));
+      addResult("🔎 Reverse image search","not_supported","Автоматический поиск совпадений по внешним сервисам не подключён. Фото не отправляется на сторонние сайты.");
+    }
+    addProgress("Поиск завершён за "+Math.round(performance.now()-started)+" мс",true);
+  }catch(e){addResult("Поиск","error",{message:e.message});}
+  finally{setBusy(false);}
 }
 </script></body></html>
