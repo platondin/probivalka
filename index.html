@@ -16,19 +16,18 @@
 </style>
 </head><body><div class="wrap">
 <div class="hero"><span class="badge">PUBLIC OSINT • v1</span><h1>OSINT Hub</h1><div class="muted">Единая панель для законного поиска открытой информации.</div></div>
-<div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button><button class="secondary" onclick="autoScan()">⚡ Автоскан</button><button class="secondary" onclick="safeExposureScan()">🛡️ Проверка утечек</button></div>
+<div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind">
+<option value="phone">Телефон</option>
+<option value="email">Email</option>
+<option value="ip">IP-адрес</option>
+<option value="username">Username / ник</option>
+<option value="domain">Домен</option>
+<option value="name">Имя / фамилия</option>
+<option value="photo">Фото</option>
+</select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button id="searchButton" onclick="runSearch()">🔎 Искать</button></div>
+<div id="photoPicker" style="display:none;margin-top:10px"><input id="photoFile" type="file" accept="image/*" style="width:100%"><div class="muted" style="margin-top:6px">Фото анализируется прямо в браузере: EXIF, технические данные, хэш и доступные признаки изображения.</div></div>
 <div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
-<div class="panel" style="margin-top:14px">
-<h2>📷 Анализ фотографии</h2>
-<div class="muted" style="margin-bottom:10px">Загрузи фото: сайт попробует прочитать доступные EXIF-метаданные прямо в браузере и подготовит ссылки для ручного обратного поиска изображения.</div>
-<input id="photoFile" type="file" accept="image/*" onchange="analyzePhoto()" style="width:100%">
-<div id="photoResult" class="result panel"><h3>Результат анализа</h3><pre id="photoText"></pre><div class="actions" style="margin-top:12px">
-<button class="secondary" onclick="openReverseSearch()">🔎 Обратный поиск</button>
-<button class="secondary" onclick="openPimeyes()">PimEyes</button>
-<button class="secondary" onclick="openExifTool()">ExifTool</button>
-</div></div>
-</div>
-<div id="scanStatus" class="result panel"><h3>Результаты автосканирования</h3><div id="scanText"></div></div></div></div>
+<div id="scanStatus" class="result panel"><h3>Результаты поиска</h3><div id="scanText"></div></div></div></div>
 <div class="grid">
 <div class="card"><h3>Epieos</h3><span class="tag">Email / phone OSINT</span><div class="muted">Публичный OSINT-поиск и enrichment.</div><div class="actions"><a target="_blank" href="https://epieos.com/">Открыть</a></div></div>
 <div class="card"><h3>Have I Been Pwned</h3><span class="tag">Email / breaches</span><div class="muted">Проверка собственного email на известные утечки.</div><div class="actions"><a target="_blank" href="https://haveibeenpwned.com/">Открыть</a></div></div>
@@ -45,101 +44,148 @@
 <div class="card"><h3>Osintgram</h3><span class="tag">Instagram / public OSINT</span><div class="muted">Инструмент для анализа только доступных публичных данных.</div><div class="actions"><a target="_blank" href="https://github.com/Datalux/Osintgram">GitHub</a></div></div>
 <div class="card"><h3>Getcontact</h3><span class="tag">Phone / caller ID</span><div class="muted">Отдельный сервис идентификации звонков; требует ручного использования и соблюдения правил.</div><div class="actions"><a target="_blank" href="https://www.getcontact.com/">Открыть</a></div></div>
 <div class="card"><h3>IKnowWhatYouDownload</h3><span class="tag">IP / torrent exposure</span><div class="muted">Публичный сервис, связанный с отображением торрент-активности по IP. Используй только для проверки собственного IP и учитывай вопросы приватности.</div><div class="actions"><a target="_blank" href="https://iknowwhatyoudownload.com/">Открыть</a></div></div></div>
-<footer>Автосканирование выполняется сервером и показывает только результаты источников с доступным API. Сайт не открывает Google, не перебрасывает пользователя по вкладкам и не получает пароли, закрытые аккаунты или приватные данные.</footer>
+<footer>Поиск объединяет публичные и официально доступные источники/API. Содержимое украденных баз, пароли, закрытые аккаунты и приватные данные не извлекаются. Результаты появляются внутри этой страницы по мере получения ответов.</footer>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script><script>
-const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"имя или ключевое слово"};
-document.getElementById("kind").addEventListener("change",e=>document.getElementById("query").placeholder=placeholders[e.target.value]);
+const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"Имя или фамилия",photo:"Выбери фотографию ниже"};
+
+document.getElementById("kind").addEventListener("change",e=>{
+  const kind=e.target.value, query=document.getElementById("query"), picker=document.getElementById("photoPicker"), button=document.getElementById("searchButton");
+  const isPhoto=kind==="photo";
+  query.placeholder=placeholders[kind]||"";
+  query.disabled=isPhoto;
+  query.style.opacity=isPhoto?".55":"1";
+  picker.style.display=isPhoto?"block":"none";
+  button.textContent=isPhoto?"📷 Анализировать":"🔎 Искать";
+});
 
 function esc(v){
-  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));
 }
 function renderData(data){
-  if(typeof data==="string") return "<div class=\"data-text\">"+esc(data)+"</div>";
-  if(Array.isArray(data)) return "<pre>"+esc(JSON.stringify(data,null,2))+"</pre>";
+  if(typeof data==="string") return "<div class="data-text">"+esc(data)+"</div>";
   return "<pre>"+esc(JSON.stringify(data,null,2))+"</pre>";
 }
 function statusLabel(s){
-  return s==="ok"?"Готово":s==="clean"?"Не найдено":s==="needs_api_key"?"Нужен API-ключ":s==="not_supported"?"Нет API":"Ошибка";
+  return s==="ok"?"Готово":s==="clean"?"Не найдено":s==="needs_api_key"?"Нужен API-ключ":s==="not_supported"?"Не подключено":"Ошибка";
 }
-async function autoScan(){
-  const kind=document.getElementById("kind").value;
-  const q=document.getElementById("query").value.trim();
-  if(!q){alert("Введи значение для поиска.");return}
-  const box=document.getElementById("scanStatus"),out=document.getElementById("scanText");
-  box.style.display="block";
-  out.innerHTML="<div class=\"card\"><h3>⏳ Сканирование…</h3><div class=\"muted\">Собираю доступные результаты. Страница не будет открывать другие сайты.</div></div>";
-  try{
-    const r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind,value:q})});
-    const data=await r.json();
-    if(!r.ok) throw new Error(data.error||"Ошибка API");
-    out.innerHTML=data.results.map(x=>"<div class=\"card\" style=\"margin-top:10px\"><h3>"+esc(x.source)+" <span class=\"tag\">"+statusLabel(x.status)+"</span></h3>"+renderData(x.data)+"</div>").join("");
-  }catch(e){
-    const local = {
-      phone:"Номер: "+q+"\\n\\nСерверный API недоступен. Для автоматического поиска по телефону нужен подключённый API.",
-      email:"Email: "+q+"\\n\\nСерверный API HIBP недоступен. Нужен backend с HIBP_API_KEY.",
-      ip:"IP: "+q+"\\n\\nСерверные IPinfo/RDAP-запросы недоступны.",
-      username:"Username: "+q+"\\n\\nGitHub API недоступен на этой странице.",
-      domain:"Домен: "+q+"\\n\\nDNS API недоступен на этой странице.",
-      name:"Имя/ключевое слово: "+q+"\\n\\nОбщий поиск без API не выполняется."
-    };
-    out.innerHTML="<div class=\"card\"><h3>⚠️ Backend недоступен</h3><pre>"+esc(local[kind]||"API недоступен.")+"</pre><div class=\"muted\">"+esc(e.message)+"</div><p>Для настоящего автоматического сканирования открой сайт через Vercel/другой backend с /api/scan.</p></div>";
-  }
-}}
+function addProgress(t){
+  const el=document.createElement("div");
+  el.className="muted"; el.style.margin="6px 0";
+  el.textContent="⏳ "+t;
+  document.getElementById("scanText").appendChild(el);
+}
+function addResult(source,status,data){
+  const card=document.createElement("div");
+  card.className="card"; card.style.marginTop="10px";
+  card.innerHTML="<h3>"+esc(source)+" <span class="tag">"+esc(statusLabel(status))+"</span></h3>"+renderData(data);
+  document.getElementById("scanText").appendChild(card);
+}
+function setBusy(busy){
+  const b=document.getElementById("searchButton");
+  b.disabled=busy; b.style.opacity=busy?".65":"1";
+}
+
+function planFor(kind){
+  const plans={
+    email:[["Have I Been Pwned","hibp"]],
+    username:[["GitHub public users","github-users"]],
+    ip:[["IPinfo","ipinfo"],["ARIN RDAP","arin-rdap"],["RIPE RDAP","ripe-rdap"]],
+    domain:[["Google DNS — A","dns-a"],["Google DNS — MX","dns-mx"],["Google DNS — NS","dns-ns"],["Google DNS — TXT","dns-txt"]],
+    phone:[["Phone basic analysis","phone-basic"]],
+    name:[["Wikipedia public search","wikipedia"],["Wikidata public search","wikidata"]]
+  };
+  return plans[kind]||[];
+}
+
+async function searchSource(kind,value,source){
+  const r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind,value,source})});
+  let data={}; try{data=await r.json()}catch{}
+  if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
+  return data;
+}
 
 async function runSearch(){
-  const kind=document.getElementById("kind").value;
-  const q=document.getElementById("query").value.trim();
-  if(!q){alert("Введи значение для поиска.");return}
-  // First try the real backend. If the page is hosted on GitHub Pages,
-  // show a useful local result instead of silently doing nothing.
-  await autoScan();
-}
-async function safeExposureScan(){ await autoScan(); }
+  const kind=document.getElementById("kind").value, q=document.getElementById("query").value.trim();
+  const box=document.getElementById("scanStatus"), out=document.getElementById("scanText");
+  box.style.display="block"; out.innerHTML="";
+  setBusy(false);
 
-async function analyzePhoto(){
-  const file=document.getElementById("photoFile").files[0];
-  if(!file)return;
-  const out=document.getElementById("photoText");
-  document.getElementById("photoResult").style.display="block";
-  out.textContent="Читаю доступные метаданные…";
-  try{
-    const exif=await readExif(file);
-    const rows=[
-      "Файл: "+file.name,
-      "Размер: "+Math.round(file.size/1024)+" KB",
-      "Тип: "+file.type,
-      "Разрешение: "+(exif.width||"—")+" × "+(exif.height||"—"),
-      "Камера: "+(exif.Make||"—")+" "+(exif.Model||""),
-      "Дата съёмки: "+(exif.DateTimeOriginal||exif.DateTime||"—"),
-      "GPS: "+(exif.latitude!=null&&exif.longitude!=null?(exif.latitude+", "+exif.longitude):"не найдено"),
-      "Автор/описание: "+(exif.Artist||exif.Description||"—")
-    ];
-    out.textContent=rows.join("\n")+"\n\nСайт не устанавливает личность человека по фотографии. Обратный поиск через сторонние сайты здесь не запускается автоматически.";
-  }catch(err){out.textContent="Не удалось прочитать EXIF: "+err.message;}
+  if(kind==="photo"){
+    const file=document.getElementById("photoFile").files[0];
+    if(!file){addResult("Поиск","not_supported","Фото не выбрано. Выбери изображение и нажми кнопку ещё раз.");return}
+    setBusy(true);
+    addProgress("Читаю файл и EXIF-метаданные");
+    try{
+      const info=await analyzePhotoFile(file);
+      addResult("📷 Анализ фотографии","ok",info);
+      addProgress("Технический анализ готов");
+      addResult("🔎 Обратный поиск изображения","not_supported","Автоматический reverse-image API в текущей конфигурации не подключён, поэтому фото не отправляется на сторонние сайты и новые страницы не открываются.");
+    }catch(e){addResult("📷 Анализ фотографии","error",{message:e.message})}
+    finally{setBusy(false)}
+    return;
+  }
+
+  if(!q){addResult("Поиск","not_supported","Введи значение для поиска.");return}
+  setBusy(true);
+  const plans=planFor(kind);
+  if(!plans.length){addResult("Scanner","not_supported","Для выбранного типа сейчас нет подключённых автоматических API.");setBusy(false);return}
+
+  const summary=document.createElement("div");
+  summary.className="notice"; summary.textContent="🔎 Поиск запущен. Результаты будут добавляться сюда по мере ответа источников.";
+  out.appendChild(summary);
+
+  let finished=0;
+  await Promise.all(plans.map(async ([label,source])=>{
+    addProgress("Проверяю "+label);
+    try{
+      const data=await searchSource(kind,q,source);
+      const item=(data.results||[])[0];
+      addResult(item?.source||label,item?.status||"not_supported",item?.data??"Источник не вернул данных.");
+    }catch(e){
+      addResult(label,"error",{message:e.message});
+    }finally{
+      finished++;
+      const p=document.createElement("div");
+      p.className="muted"; p.style.margin="6px 0";
+      p.textContent="✅ Завершено: "+finished+" / "+plans.length;
+      out.appendChild(p);
+    }
+  }));
+  summary.textContent="✅ Поиск завершён. Ответы от всех подключённых источников получены и показаны выше.";
+  setBusy(false);
 }
+
+async function analyzePhotoFile(file){
+  const bytes=await file.arrayBuffer();
+  const digest=await crypto.subtle.digest("SHA-256",bytes);
+  const hash=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  const exif=await readExif(file);
+  const img=await new Promise((resolve,reject)=>{
+    const i=new Image(); i.onload=()=>resolve(i); i.onerror=()=>reject(new Error("не удалось прочитать изображение")); i.src=URL.createObjectURL(file);
+  });
+  return {
+    file:file.name,
+    size_bytes:file.size,
+    size_kb:Math.round(file.size/1024),
+    mime_type:file.type||"unknown",
+    width:img.naturalWidth,
+    height:img.naturalHeight,
+    sha256:hash,
+    exif:exif||{},
+    note:"Сайт не устанавливает личность человека по фотографии."
+  };
+}
+
 async function readExif(file){
+  if(window.exifr&&typeof window.exifr.parse==="function") return await window.exifr.parse(file,{gps:true});
   if(!window.exifrPromise){
     window.exifrPromise=new Promise((resolve,reject)=>{
-      const s=document.createElement("script");
-      s.src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js";
-      s.onload=resolve;s.onerror=()=>reject(new Error("не удалось загрузить модуль EXIF"));
-      document.head.appendChild(s);
+      const s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js";
+      s.onload=resolve; s.onerror=()=>reject(new Error("не удалось загрузить модуль EXIF")); document.head.appendChild(s);
     });
   }
   await window.exifrPromise;
-  const ex=await window.exifr.parse(file,{gps:true});
-  const img=await new Promise((resolve,reject)=>{
-    const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=URL.createObjectURL(file);
-  });
-  if(ex){ex.width=img.naturalWidth;ex.height=img.naturalHeight;return ex}
-  return {width:img.naturalWidth,height:img.naturalHeight};
+  return await window.exifr.parse(file,{gps:true});
 }
-async function openReverseSearch(){
-  const f=document.getElementById("photoFile").files[0];
-  if(!f){alert("Сначала загрузи фото.");return}
-  document.getElementById("photoText").textContent+="\n\nАвтоматический reverse-image API пока не подключён.";
-}
-function openPimeyes(){document.getElementById("photoText").textContent+="\n\nPimEyes не вызывается автоматически: для этого нужен официальный API/разрешённая интеграция."}
-function openExifTool(){document.getElementById("photoText").textContent+="\n\nExifTool анализируется локально через доступные EXIF-данные."}
 </script></body></html>
