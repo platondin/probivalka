@@ -33,7 +33,8 @@
 <div class="card"><h3>Intelligence X</h3><span class="tag">Public / archival search</span><div class="muted">Поиск по публичным и архивным источникам; соблюдай правила сервиса.</div><div class="actions"><a target="_blank" href="https://intelx.io/">Открыть</a></div></div>
 <div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div>
 <div class="card"><h3>Osintgram</h3><span class="tag">Instagram / public OSINT</span><div class="muted">Инструмент для анализа только доступных публичных данных.</div><div class="actions"><a target="_blank" href="https://github.com/Datalux/Osintgram">GitHub</a></div></div>
-<div class="card"><h3>Getcontact</h3><span class="tag">Phone / caller ID</span><div class="muted">Отдельный сервис идентификации звонков; требует ручного использования и соблюдения правил.</div><div class="actions"><a target="_blank" href="https://www.getcontact.com/">Открыть</a></div></div></div>
+<div class="card"><h3>Getcontact</h3><span class="tag">Phone / caller ID</span><div class="muted">Отдельный сервис идентификации звонков; требует ручного использования и соблюдения правил.</div><div class="actions"><a target="_blank" href="https://www.getcontact.com/">Открыть</a></div></div>
+<div class="card"><h3>IKnowWhatYouDownload</h3><span class="tag">IP / torrent exposure</span><div class="muted">Публичный сервис, связанный с отображением торрент-активности по IP. Используй только для проверки собственного IP и учитывай вопросы приватности.</div><div class="actions"><a target="_blank" href="https://iknowwhatyoudownload.com/">Открыть</a></div></div></div>
 <footer>Автоскан открывает публичные источники и официальные страницы параллельно. Отдельная проверка утечек предназначена только для проверки собственных/разрешённых данных; инструмент не получает пароли, закрытые аккаунты или приватные базы. Некоторые сервисы требуют API-ключ или ручной ввод; например, HIBP требует авторизацию для поиска конкретного email через API. </footer>
 </div>
 <script>
@@ -61,6 +62,7 @@ if(kind==="email"){
   add("IntelTechniques","https://inteltechniques.com/tools/");
 }else if(kind==="ip"){
   add("IPinfo","https://ipinfo.io/"+e);
+  add("IKnowWhatYouDownload","https://iknowwhatyoudownload.com/");
   add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
   add("ARIN RDAP","https://search.arin.net/rdap/?query="+e);
   add("RIPE Database","https://apps.db.ripe.net/db-web-ui/query?searchtext="+e);
