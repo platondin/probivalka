@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/scan.js": {
+      "runtime": "nodejs22.x"
+    }
+  }
+}
