@@ -79,7 +79,14 @@ async function autoScan(){
   }
 }
 
-async function runSearch(){ await autoScan(); }
+async function runSearch(){
+  const kind=document.getElementById("kind").value;
+  const q=document.getElementById("query").value.trim();
+  if(!q){alert("Введи значение для поиска.");return}
+  // First try the real backend. If the page is hosted on GitHub Pages,
+  // show a useful local result instead of silently doing nothing.
+  await autoScan();
+}
 async function safeExposureScan(){ await autoScan(); }
 
 async function analyzePhoto(){
