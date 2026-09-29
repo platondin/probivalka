@@ -27,7 +27,13 @@
 </select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button id="searchButton" onclick="runSearch()">🔎 Искать</button></div>
 <div id="photoPicker" style="display:none;margin-top:10px"><input id="photoFile" type="file" accept="image/*" style="width:100%"><div class="muted" style="margin-top:6px">Фото анализируется прямо в браузере: EXIF, технические данные, хэш и доступные признаки изображения.</div></div>
 <div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
-<div id="scanStatus" class="result panel"><h3>Результаты поиска</h3><div id="scanText"></div></div></div></div>
+<div class="actions" style="margin-top:12px">
+<button class="secondary" type="button" onclick="clearResults()">🧹 Очистить</button>
+<button class="secondary" type="button" onclick="exportResults()">📥 Экспорт JSON</button>
+</div>
+<div id="scanStatus" class="result panel"><h3>Результаты поиска</h3><div id="scanText"></div></div>
+</div>
+<div class="panel" style="margin-top:16px"><h2>История поиска</h2><div id="historyList" class="muted">История пуста.</div></div></div>
 <div class="grid">
 <div class="card"><h3>Epieos</h3><span class="tag">Email / phone OSINT</span><div class="muted">Публичный OSINT-поиск и enrichment.</div><div class="actions"><a target="_blank" href="https://epieos.com/">Открыть</a></div></div>
 <div class="card"><h3>Have I Been Pwned</h3><span class="tag">Email / breaches</span><div class="muted">Проверка собственного email на известные утечки.</div><div class="actions"><a target="_blank" href="https://haveibeenpwned.com/">Открыть</a></div></div>
@@ -47,6 +53,29 @@
 <footer>Поиск объединяет публичные и официально доступные источники/API. Содержимое украденных баз, пароли, закрытые аккаунты и приватные данные не извлекаются. Результаты появляются внутри этой страницы по мере получения ответов.</footer>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script><script>
+let currentResults=[];
+let searchHistory=JSON.parse(localStorage.getItem("osintHubHistory")||"[]");
+function saveHistory(kind,q){
+  if(kind==="photo") return;
+  searchHistory=[{kind,q,time:new Date().toISOString()},...searchHistory.filter(x=>!(x.kind===kind&&x.q===q))].slice(0,20);
+  localStorage.setItem("osintHubHistory",JSON.stringify(searchHistory));renderHistory();
+}
+function renderHistory(){
+  const el=document.getElementById("historyList");
+  if(!searchHistory.length){el.textContent="История пуста.";return;}
+  el.innerHTML=searchHistory.map((x,i)=>'<div class="card" style="margin-top:8px"><div><b>'+esc(x.q)+'</b> <span class="tag">'+esc(x.kind)+'</span></div><div class="muted">'+new Date(x.time).toLocaleString()+'</div><div class="actions"><button class="secondary" onclick="repeatHistory('+i+')">Повторить</button></div></div>').join("");
+}
+function repeatHistory(i){
+  const x=searchHistory[i];document.getElementById("kind").value=x.kind;document.getElementById("query").value=x.q;
+  document.getElementById("kind").dispatchEvent(new Event("change"));runSearch();
+}
+function clearResults(){currentResults=[];document.getElementById("scanText").innerHTML="";document.getElementById("scanStatus").style.display="none";}
+function exportResults(){
+  const payload={exported_at:new Date().toISOString(),results:currentResults};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="osint-results-"+Date.now()+".json";a.click();URL.revokeObjectURL(a.href);
+}
+
 const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"Имя или фамилия",photo:"Выбери фотографию ниже"};
 document.getElementById("kind").addEventListener("change",e=>{
   const kind=e.target.value,q=document.getElementById("query"),picker=document.getElementById("photoPicker"),button=document.getElementById("searchButton");
@@ -70,6 +99,7 @@ function addProgress(text,done=false){
   document.getElementById("scanText").appendChild(el);
 }
 function addResult(source,status,data){
+  currentResults.push({source,status,data});
   const card=document.createElement("div");
   card.className="card";card.style.marginTop="10px";
   card.innerHTML="<h3>"+esc(source)+" <span class=\"tag\">"+esc(status==="ok"?"Готово":status==="clean"?"Не найдено":status==="error"?"Ошибка":"Информация")+"</span></h3>"+renderData(data);
@@ -171,6 +201,8 @@ async function runSearch(){
   box.style.display="block";out.innerHTML="";
   if(kind!=="photo"&&!q){addResult("Поиск","error","Введи значение для поиска.");return;}
   setBusy(true);
+  currentResults=[];
+  saveHistory(kind,q);
   const started=performance.now();
   addProgress("Поиск запущен — результаты появятся здесь по мере ответа источников");
   try{
@@ -191,4 +223,5 @@ async function runSearch(){
   }catch(e){addResult("Поиск","error",{message:e.message});}
   finally{setBusy(false);}
 }
+renderHistory();
 </script></body></html>
