@@ -19,6 +19,16 @@
 <div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button><button class="secondary" onclick="autoScan()">⚡ Автоскан</button><button class="secondary" onclick="safeExposureScan()">🛡️ Проверка утечек</button></div>
 <div class="panel" style="margin-top:14px"><h2>📷 Проверка фото на метаданные</h2><div class="muted" style="margin-bottom:10px">Выбери фото — метаданные анализируются прямо в браузере. Файл не отправляется на сервер этого сайта.</div><input id="photoFile" type="file" accept="image/*" style="width:100%"><div class="actions" style="margin-top:10px"><button class="secondary" onclick="analyzePhoto()">🔍 Проверить метаданные</button></div><div id="photoStatus" class="result panel"><h3>Метаданные</h3><pre id="photoText"></pre></div></div>
 <div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
+<div class="panel" style="margin-top:14px">
+<h2>📷 Анализ фотографии</h2>
+<div class="muted" style="margin-bottom:10px">Загрузи фото: сайт попробует прочитать доступные EXIF-метаданные прямо в браузере и подготовит ссылки для ручного обратного поиска изображения.</div>
+<input id="photoFile" type="file" accept="image/*" onchange="analyzePhoto()" style="width:100%">
+<div id="photoResult" class="result panel"><h3>Результат анализа</h3><pre id="photoText"></pre><div class="actions" style="margin-top:12px">
+<button class="secondary" onclick="openReverseSearch()">🔎 Обратный поиск</button>
+<button class="secondary" onclick="openPimeyes()">PimEyes</button>
+<button class="secondary" onclick="openExifTool()">ExifTool</button>
+</div></div>
+</div>
 <div id="scanStatus" class="result panel"><h3>Автоскан</h3><pre id="scanText"></pre></div><div id="exposureStatus" class="result panel"><h3>Проверка экспозиции</h3><pre id="exposureText"></pre></div><div id="result" class="result panel"><h3>Сформированные публичные запросы</h3><pre id="resultText"></pre><div class="actions" style="margin-top:12px"><button class="secondary" onclick="copyQuery()">Скопировать запрос</button></div></div></div>
 <div class="grid">
 <div class="card"><h3>Epieos</h3><span class="tag">Email / phone OSINT</span><div class="muted">Публичный OSINT-поиск и enrichment.</div><div class="actions"><a target="_blank" href="https://epieos.com/">Открыть</a></div></div>
@@ -174,5 +184,51 @@ else if(kind==="username")l=["Social Searcher: "+q,'Google: "'+q+'"','Google: si
 else if(kind==="domain")l=["Google: site:"+q,'Google: "'+q+'"',"DNS/WHOIS search: "+q];
 else l=['Google exact: "'+q+'"',"Social Searcher: "+q,"Google public-web search: "+q];
 lastQuery=l.join("\n");document.getElementById("resultText").textContent=lastQuery;document.getElementById("result").style.display="block"}
+async function analyzePhoto(){
+const file=document.getElementById("photoFile").files[0];
+if(!file)return;
+const out=document.getElementById("photoText");
+document.getElementById("photoResult").style.display="block";
+out.textContent="Читаю доступные метаданные…";
+try{
+const exif=await readExif(file);
+const rows=[
+"Файл: "+file.name,
+"Размер: "+Math.round(file.size/1024)+" KB",
+"Тип: "+file.type,
+"Разрешение: "+(exif.width||"—")+" × "+(exif.height||"—"),
+"Камера: "+(exif.Make||"—")+" "+(exif.Model||""),
+"Дата съёмки: "+(exif.DateTimeOriginal||exif.DateTime||"—"),
+"GPS: "+(exif.latitude!=null&&exif.longitude!=null?(exif.latitude+", "+exif.longitude):"не найдено"),
+"Автор/описание: "+(exif.Artist||exif.Description||"—")
+];
+out.textContent=rows.join("\n")+"\n\nОбратный поиск: используй кнопку ниже и загрузи это фото в выбранный сервис вручную. Сайт не пытается устанавливать личность человека по фотографии.";
+}catch(err){
+out.textContent="Не удалось прочитать EXIF: "+err.message+"\n\nФото всё равно можно проверить через обратный поиск.";
+}}
+async function readExif(file){
+if(!window.exifrPromise){
+window.exifrPromise=new Promise((resolve,reject)=>{
+const s=document.createElement("script");
+s.src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js";
+s.onload=()=>resolve();
+s.onerror=()=>reject(new Error("не удалось загрузить модуль EXIF"));
+document.head.appendChild(s);
+});
+}
+await window.exifrPromise;
+const ex=await window.exifr.parse(file,{gps:true});
+const img=await new Promise((resolve,reject)=>{
+const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=URL.createObjectURL(file);
+});
+if(ex) {ex.width=img.naturalWidth;ex.height=img.naturalHeight;return ex}
+return {width:img.naturalWidth,height:img.naturalHeight};
+}
+function openReverseSearch(){
+window.open("https://lens.google.com/","_blank");
+window.open("https://www.bing.com/visualsearch","_blank");
+}
+function openPimeyes(){window.open("https://pimeyes.com/","_blank")}
+function openExifTool(){window.open("https://exiftool.org/","_blank")}
 async function copyQuery(){try{await navigator.clipboard.writeText(lastQuery);alert("Запросы скопированы.")}catch(e){alert("Не удалось скопировать автоматически.")}}
 </script></body></html>
