@@ -87,60 +87,19 @@ box.style.display="block";
 async function autoScan(){
 const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();
 if(!q){alert("Введи значение для поиска.");return}
-const e=encodeURIComponent(q), jobs=[];
-
-function add(name,url,mode="open"){jobs.push({name,url,mode})}
-
-if(kind==="email"){
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("Epieos","https://epieos.com/");
-  add("Have I Been Pwned","https://haveibeenpwned.com/");
-  add("Social Searcher","https://www.social-searcher.com/");
-  add("IntelTechniques","https://inteltechniques.com/tools/");
-}else if(kind==="phone"){
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("Epieos","https://epieos.com/");
-  add("FreeCarrierLookup","https://freecarrierlookup.com/");
-  add("PhoneInfoga","https://github.com/sundowndev/PhoneInfoga");
-  add("Getcontact","https://www.getcontact.com/");
-  add("IntelTechniques","https://inteltechniques.com/tools/");
-}else if(kind==="ip"){
-  add("IPinfo","https://ipinfo.io/"+e);
-  add("IKnowWhatYouDownload","https://iknowwhatyoudownload.com/");
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("ARIN RDAP","https://search.arin.net/rdap/?query="+e);
-  add("RIPE Database","https://apps.db.ripe.net/db-web-ui/query?searchtext="+e);
-  add("IntelTechniques","https://inteltechniques.com/tools/");
-}else if(kind==="username"){
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("GitHub public results","https://www.google.com/search?q="+encodeURIComponent('site:github.com "'+q+'"'));
-  add("Reddit public results","https://www.google.com/search?q="+encodeURIComponent('site:reddit.com "'+q+'"'));
-  add("Social Searcher","https://www.social-searcher.com/");
-  add("Osintgram","https://github.com/Datalux/Osintgram");
-  add("IntelTechniques","https://inteltechniques.com/tools/");
-}else if(kind==="domain"){
-  add("Google site search","https://www.google.com/search?q="+encodeURIComponent('site:'+q));
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("DNS Google","https://dns.google/resolve?name="+e+"&type=ANY");
-  add("IntelTechniques","https://inteltechniques.com/tools/");
-}else{
-  add("Google exact","https://www.google.com/search?q="+encodeURIComponent('"'+q+'"'));
-  add("Social Searcher","https://www.social-searcher.com/");
-  add("IntelTechniques","https://inteltechniques.com/tools/");
+const box=document.getElementById("scanStatus"),out=document.getElementById("scanText");
+box.style.display="block";out.textContent="⏳ Запускаю автоматический сбор результатов…";
+try{
+const r=await fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind,value:q})});
+const data=await r.json();
+if(!r.ok) throw new Error(data.error||"Ошибка API");
+out.textContent=data.results.map(x=>{
+let d=typeof x.data==="string"?x.data:JSON.stringify(x.data,null,2);
+return "━━ "+x.source+" ["+x.status+"] ━━\n"+d;
+}).join("\n\n");
+}catch(e){
+out.textContent="❌ Автоматический сбор не запустился: "+e.message+"\n\nЕсли сайт открыт через GitHub Pages, /api/scan работать не будет — нужен Vercel/другой backend.";
 }
-
-let opened=0;
-for(const job of jobs){
-  const w=window.open(job.url,"_blank");
-  if(w)opened++;
-  await new Promise(r=>setTimeout(r,180));
-}
-document.getElementById("scanText").textContent=
-"Автоскан завершён. Открыто источников: "+opened+" из "+jobs.length+"\n\n"+
-jobs.map((x,i)=>(i+1)+". "+x.name+" — "+x.url).join("\n")+
-"\n\nЧасть инструментов (PimEyes, ExifTool, Maltego, Osintgram, Getcontact) требует ручной работы, загрузки файла, приложения или авторизации — сайт не пытается обходить эти ограничения.\n"+
-"Не включены автоматизация доступа к закрытым аккаунтам, паролям, приватным данным, незаконно полученным базам и другим непубличным источникам.";
-document.getElementById("scanStatus").style.display="block";
 }
 function safeExposureScan(){
 const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();
@@ -224,9 +183,10 @@ const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=URL.createObj
 if(ex) {ex.width=img.naturalWidth;ex.height=img.naturalHeight;return ex}
 return {width:img.naturalWidth,height:img.naturalHeight};
 }
-function openReverseSearch(){
-window.open("https://lens.google.com/","_blank");
-window.open("https://www.bing.com/visualsearch","_blank");
+async function openReverseSearch(){
+const f=document.getElementById("photoFile").files[0];
+if(!f){alert("Сначала загрузи фото.");return}
+document.getElementById("photoText").textContent+="\n\n⚠️ Для настоящего автоматического reverse-image поиска нужен серверный API (например TinEye API). В текущей версии EXIF анализируется локально, а сервисы без документированного API не скрейпятся.";
 }
 function openPimeyes(){window.open("https://pimeyes.com/","_blank")}
 function openExifTool(){window.open("https://exiftool.org/","_blank")}
