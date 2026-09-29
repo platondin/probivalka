@@ -100,16 +100,7 @@ async function searchEmail(q){
       addResult("🌐 DNS MX — "+domain,"ok",d);
     }catch(e){addResult("🌐 DNS MX — "+domain,"error",{message:e.message});}
   }
-  addProgress("🛡️ Проверяю email через Have I Been Pwned");
-  try {
-    const r = await fetch("/api/breaches?email=" + encodeURIComponent(q));
-    let d = {}; try { d = await r.json(); } catch {}
-    if (r.status === 404) addResult("🛡️ Have I Been Pwned", "clean", {email:q, message:"Email не найден в доступных записях Have I Been Pwned."});
-    else if (!r.ok) addResult("🛡️ Have I Been Pwned", "error", d);
-    else addResult("🛡️ Have I Been Pwned", "ok", {email:q, breaches:d});
-  } catch(e) {
-    addResult("🛡️ Have I Been Pwned", "error", {message:"Не удалось выполнить проверку.", details:e.message});
-  }
+  addResult("🛡️ Проверка утечек","not_supported","Автоматическая проверка закрытых/слитых баз не выполняется. Для такой проверки нужен отдельный разрешённый API; сайт не загружает украденные базы.");
 }
 async function searchPhone(q){
   const digits=q.replace(/\D/g,"");
