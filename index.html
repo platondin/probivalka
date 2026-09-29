@@ -72,7 +72,7 @@ function addProgress(text,done=false){
 function addResult(source,status,data){
   const card=document.createElement("div");
   card.className="card";card.style.marginTop="10px";
-  card.innerHTML="<h3>"+esc(source)+" <span class="tag">"+esc(status==="ok"?"Готово":status==="clean"?"Не найдено":status==="error"?"Ошибка":"Информация")+"</span></h3>"+renderData(data);
+  card.innerHTML="<h3>"+esc(source)+" <span class=\"tag\">"+esc(status==="ok"?"Готово":status==="clean"?"Не найдено":status==="error"?"Ошибка":"Информация")+"</span></h3>"+renderData(data);
   document.getElementById("scanText").appendChild(card);
 }
 function setBusy(v){
