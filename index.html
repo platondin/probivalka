@@ -17,6 +17,7 @@
 </head><body><div class="wrap">
 <div class="hero"><span class="badge">PUBLIC OSINT • v1</span><h1>OSINT Hub</h1><div class="muted">Единая панель для законного поиска открытой информации.</div></div>
 <div class="panel"><h2>Новый поиск</h2><div class="search"><select id="kind"><option value="phone">Телефон</option><option value="email">Email</option><option value="ip">IP-адрес</option><option value="username">Username / ник</option><option value="domain">Домен</option><option value="name">Имя / ключевое слово</option></select><input id="query" placeholder="+351 912 345 678" autocomplete="off"><button onclick="runSearch()">Искать</button><button class="secondary" onclick="autoScan()">⚡ Автоскан</button><button class="secondary" onclick="safeExposureScan()">🛡️ Проверка утечек</button></div>
+<div class="panel" style="margin-top:14px"><h2>📷 Проверка фото на метаданные</h2><div class="muted" style="margin-bottom:10px">Выбери фото — метаданные анализируются прямо в браузере. Файл не отправляется на сервер этого сайта.</div><input id="photoFile" type="file" accept="image/*" style="width:100%"><div class="actions" style="margin-top:10px"><button class="secondary" onclick="analyzePhoto()">🔍 Проверить метаданные</button></div><div id="photoStatus" class="result panel"><h3>Метаданные</h3><pre id="photoText"></pre></div></div>
 <div class="notice">Используй только свои данные, данные с разрешением владельца и публичную информацию. Панель не ищет пароли, закрытые аккаунты, слитые базы, «пробивы» или приватные данные.</div>
 <div id="scanStatus" class="result panel"><h3>Автоскан</h3><pre id="scanText"></pre></div><div id="exposureStatus" class="result panel"><h3>Проверка экспозиции</h3><pre id="exposureText"></pre></div><div id="result" class="result panel"><h3>Сформированные публичные запросы</h3><pre id="resultText"></pre><div class="actions" style="margin-top:12px"><button class="secondary" onclick="copyQuery()">Скопировать запрос</button></div></div></div>
 <div class="grid">
@@ -37,9 +38,42 @@
 <div class="card"><h3>IKnowWhatYouDownload</h3><span class="tag">IP / torrent exposure</span><div class="muted">Публичный сервис, связанный с отображением торрент-активности по IP. Используй только для проверки собственного IP и учитывай вопросы приватности.</div><div class="actions"><a target="_blank" href="https://iknowwhatyoudownload.com/">Открыть</a></div></div></div>
 <footer>Автоскан открывает публичные источники и официальные страницы параллельно. Отдельная проверка утечек предназначена только для проверки собственных/разрешённых данных; инструмент не получает пароли, закрытые аккаунты или приватные базы. Некоторые сервисы требуют API-ключ или ручной ввод; например, HIBP требует авторизацию для поиска конкретного email через API. </footer>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
 <script>
 let lastQuery="";const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"имя или ключевое слово"};
 document.getElementById("kind").addEventListener("change",e=>document.getElementById("query").placeholder=placeholders[e.target.value]);
+async function analyzePhoto(){
+const input=document.getElementById("photoFile"),out=document.getElementById("photoText"),box=document.getElementById("photoStatus");
+if(!input.files.length){alert("Выбери фото.");return}
+const file=input.files[0];
+try{
+  const data=await exifr.parse(file,{tiff:true,exif:true,gps:true,iptc:true,xmp:true,icc:true,ihdr:true});
+  const meta=data||{};
+  const lines=[
+    "Файл: "+file.name,
+    "Размер: "+(file.size/1024/1024).toFixed(2)+" MB",
+    "Тип: "+file.type,
+    "",
+    "Найденные метаданные:"
+  ];
+  const keys=Object.keys(meta);
+  if(!keys.length) lines.push("Метаданные не найдены.");
+  else keys.sort().forEach(k=>{
+    let v=meta[k];
+    if(v instanceof Date) v=v.toISOString();
+    if(typeof v==="object") try{v=JSON.stringify(v)}catch(e){v=String(v)}
+    lines.push(k+": "+v);
+  });
+  if(meta.latitude!==undefined || meta.longitude!==undefined){
+    lines.push("", "⚠️ В фото обнаружены GPS-координаты. Они могут раскрывать место съёмки.");
+  }
+  out.textContent=lines.join("\n");
+}catch(err){
+  out.textContent="Не удалось прочитать метаданные.\n\n"+err;
+}
+box.style.display="block";
+}
+
 async function autoScan(){
 const kind=document.getElementById("kind").value,q=document.getElementById("query").value.trim();
 if(!q){alert("Введи значение для поиска.");return}
