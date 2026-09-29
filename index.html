@@ -43,8 +43,8 @@
 <div class="card"><h3>OSINT Framework</h3><span class="tag">Tool directory</span><div class="muted">Каталог OSINT-инструментов по категориям.</div><div class="actions"><a target="_blank" href="https://osintframework.com/">Открыть</a></div></div>
 <div class="card"><h3>Osintgram</h3><span class="tag">Instagram / public OSINT</span><div class="muted">Инструмент для анализа только доступных публичных данных.</div><div class="actions"><a target="_blank" href="https://github.com/Datalux/Osintgram">GitHub</a></div></div>
 <div class="card"><h3>Getcontact</h3><span class="tag">Phone / caller ID</span><div class="muted">Отдельный сервис идентификации звонков; требует ручного использования и соблюдения правил.</div><div class="actions"><a target="_blank" href="https://www.getcontact.com/">Открыть</a></div></div>
-</div>
-<footer>Поиск объединяет публичные и официально доступные источники/API. Проверка утечек email выполняется через Have I Been Pwned; сайт не загружает и не хранит украденные базы. Результаты появляются внутри этой страницы по мере получения ответов.</footer>
+<div class="card"><h3>IKnowWhatYouDownload</h3><span class="tag">IP / torrent exposure</span><div class="muted">Публичный сервис, связанный с отображением торрент-активности по IP. Используй только для проверки собственного IP и учитывай вопросы приватности.</div><div class="actions"><a target="_blank" href="https://iknowwhatyoudownload.com/">Открыть</a></div></div>
+<footer>Поиск объединяет публичные и официально доступные источники/API. Содержимое украденных баз, пароли, закрытые аккаунты и приватные данные не извлекаются. Результаты появляются внутри этой страницы по мере получения ответов.</footer>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script><script>
 const placeholders={phone:"+351 912 345 678",email:"name@example.com",ip:"8.8.8.8",username:"username",domain:"example.com",name:"Имя или фамилия",photo:"Выбери фотографию ниже"};
@@ -100,16 +100,7 @@ async function searchEmail(q){
       addResult("🌐 DNS MX — "+domain,"ok",d);
     }catch(e){addResult("🌐 DNS MX — "+domain,"error",{message:e.message});}
   }
-  addProgress("🛡️ Проверяю email через Have I Been Pwned");
-  try{
-    const r=await fetch("/api/breaches?email="+encodeURIComponent(q));
-    let d={}; try{d=await r.json()}catch{}
-    if(r.status===404) addResult("🛡️ Have I Been Pwned","clean",{email:q,message:"Email не найден в доступных записях утечек HIBP."});
-    else if(!r.ok) addResult("🛡️ Have I Been Pwned","error",d);
-    else addResult("🛡️ Have I Been Pwned","ok",{email:q,breaches:d});
-  }catch(e){
-    addResult("🛡️ Have I Been Pwned","error",{message:"API недоступен. Для реальной проверки нужен серверный endpoint с HIBP API key.",details:e.message});
-  }
+  addResult("🛡️ Проверка утечек","not_supported","Автоматическая проверка закрытых/слитых баз не выполняется. Для такой проверки нужен отдельный разрешённый API; сайт не загружает украденные базы.");
 }
 async function searchPhone(q){
   const digits=q.replace(/\D/g,"");
