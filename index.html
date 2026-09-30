@@ -96,9 +96,28 @@ document.getElementById("kind").addEventListener("change",e=>{
 });
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));}
+function renderValue(value){
+  if(value===null||value===undefined) return '<span class="muted">—</span>';
+  if(typeof value==="boolean") return value?'Да':'Нет';
+  if(typeof value==="number") return esc(value);
+  if(typeof value==="string"){
+    const s=value.trim();
+    if(/^https?:\\/\\//i.test(s)) return '<a href="'+esc(s)+'" target="_blank" rel="noopener noreferrer" style="color:#8ecbff;word-break:break-all">'+esc(s)+'</a>';
+    return esc(value);
+  }
+  if(Array.isArray(value)){
+    if(!value.length) return '<span class="muted">Нет данных</span>';
+    return '<div style="display:grid;gap:7px">'+value.map((v,i)=>'<div style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#0e1628"><span class="tag">#'+(i+1)+'</span><div style="margin-top:3px">'+renderValue(v)+'</div></div>').join('')+'</div>';
+  }
+  if(typeof value==="object"){
+    const entries=Object.entries(value);
+    if(!entries.length) return '<span class="muted">Нет данных</span>';
+    return '<div style="display:grid;gap:6px">'+entries.map(([k,v])=>'<div style="display:grid;grid-template-columns:minmax(120px,30%) 1fr;gap:10px;padding:7px 0;border-bottom:1px solid #1d2942"><b style="color:#b9c9e5;word-break:break-word">'+esc(k)+'</b><div style="word-break:break-word">'+renderValue(v)+'</div></div>').join('')+'</div>';
+  }
+  return esc(String(value));
+}
 function renderData(data){
-  if(typeof data==="string") return "<div>"+esc(data)+"</div>";
-  return "<pre>"+esc(JSON.stringify(data,null,2))+"</pre>";
+  return '<div style="margin-top:4px">'+renderValue(data)+'</div>';
 }
 function addProgress(text,done=false){
   const el=document.createElement("div");
