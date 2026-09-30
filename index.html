@@ -85,6 +85,14 @@ document.getElementById("kind").addEventListener("change",e=>{
   q.style.opacity=photo?".55":"1";
   picker.style.display=photo?"block":"none";
   button.textContent=photo?"📷 Анализировать":"🔎 Искать";
+  if(kind==="ip"){
+    q.value="";
+    q.placeholder="Определяю ваш IP…";
+    fetch("https://api.ipify.org?format=json")
+      .then(r=>r.json())
+      .then(d=>{ if(document.getElementById("kind").value==="ip"){ q.value=d.ip; q.placeholder="8.8.8.8"; } })
+      .catch(()=>{ q.placeholder="Введите IP вручную"; });
+  }
 });
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m));}
